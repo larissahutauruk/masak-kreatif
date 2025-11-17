@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chef PraGi — Chatbot Masakan</title>
+  <!-- Link ke CSS -->
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <div>👩‍🍳</div>
+        <div>
+          <h1>Chef PraGi — Chatbot Masakan</h1>
+          <div class="sub">Powered by Google Gemini API</div>
+        </div>
+      </header>
+
+  <!-- tips dihapus agar tampilan lebih umum -->
+
+      <div id="chat"></div>
+
+  <!-- tips dihapus agar tampilan lebih umum -->
+
+      <form id="form">
+  <input id="input" type="text" placeholder="Tulis pertanyaan kamu..." autocomplete="off" />
+        <button id="send" type="submit">Kirim</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const chatEl = document.getElementById('chat');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+
+    const history = [];
+
+
+    function addMsg(role, text) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.innerText = text;
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      return div;
+    }
+
+    // Loading effect: animated dots
+    function addLoadingMsg() {
+      const div = document.createElement('div');
+      div.className = 'msg bot loading';
+      div.innerText = '.';
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      let dots = 1;
+      const interval = setInterval(() => {
+        dots = (dots % 3) + 1;
+        div.innerText = '.'.repeat(dots);
+      }, 400);
+      div._loadingInterval = interval;
+      return div;
+    }
+
+  addMsg('sys', 'Saya Chef PraGi. Tanyakan apa saja tentang resep, bahan, teknik memasak, higienitas dapur.');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const content = (input.value || '').trim();
+      if (!content) return;
+
+      addMsg('user', content);
+      history.push({ role: 'user', content });
+      input.value = '';
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Memasak jawaban...';
+
+      // Tampilkan efek loading
+      const loadingDiv = addLoadingMsg();
+
+      try {
+        const r = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ history })
+        });
+        const data = await r.json();
+        const reply = data.reply || 'Maaf, terjadi kesalahan.';
+        // Hapus loading
+        clearInterval(loadingDiv._loadingInterval);
+        loadingDiv.remove();
+        addMsg('bot', reply);
+        history.push({ role: 'assistant', content: reply });
+      } catch (err) {
+        clearInterval(loadingDiv._loadingInterval);
+        loadingDiv.remove();
+        addMsg('bot', 'Maaf, server bermasalah. Coba lagi.');
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Kirim';
+        input.focus();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        form.dispatchEvent(new Event('submit'));
+      }
+    });
+  </script>
+</body>
+</html>
